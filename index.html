@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Student Management System{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">Dashboard</h1>
+    
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon student-icon">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Students</h3>
+                <p class="stat-number">{{ student_count }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon subject-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Subjects</h3>
+                <p class="stat-number">{{ subject_count }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon attendance-icon">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Today's Attendance</h3>
+                <p class="stat-number" id="todayAttendance">--</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon performance-icon">
+                <i class="fas fa-chart-pie"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Avg. Performance</h3>
+                <p class="stat-number" id="avgPerformance">--</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Attendance Trends</h3>
+                <div class="actions">
+                    <button class="refresh-btn"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Course Performance</h3>
+                <div class="actions">
+                    <button class="refresh-btn"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Students -->
+    <div class="section">
+        <div class="section-header">
+            <h2>Recent Students</h2>
+            <a href="{{ url_for('view_students') }}" class="view-all">View All <i class="fas fa-arrow-right"></i></a>
+        </div>
+        
+        <div class="recent-students">
+            {% if recent_students %}
+                {% for student in recent_students %}
+                    <div class="student-card">
+                        <div class="student-pic">
+                            <img src="{{ url_for('static', filename='uploads/' + student.profile_pic) }}" alt="{{ student.name }}">
+                        </div>
+                        <div class="student-info">
+                            <h4>{{ student.name }}</h4>
+                            <p>{{ student.roll_no }}</p>
+                            <p><span class="badge">{{ student.course }}</span> <span class="badge year-badge">Year {{ student.year }}</span></p>
+                        </div>
+                        <a href="{{ url_for('student_profile', id=student.id) }}" class="view-btn">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-data">
+                    <i class="fas fa-users-slash"></i>
+                    <p>No students added yet</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{{ url_for('add_student') }}" class="action-card">
+            <i class="fas fa-user-plus"></i>
+            <span>Add Student</span>
+        </a>
+        <a href="{{ url_for('attendance') }}" class="action-card">
+            <i class="fas fa-clipboard-check"></i>
+            <span>Mark Attendance</span>
+        </a>
+        <a href="{{ url_for('add_marks') }}" class="action-card">
+            <i class="fas fa-pen"></i>
+            <span>Add Marks</span>
+        </a>
+        <a href="{{ url_for('add_fees') }}" class="action-card">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Record Payment</span>
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Load attendance chart data
+    fetch('/api/attendance/stats')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    
+    // Load performance chart data
+    fetch('/api/performance/course')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Calculate average performance
+            if (data.datasets[0].data.length > 0) {
+                const avg = data.datasets[0].data.reduce((a, b) => a + b, 0) / data.datasets[0].data.length;
+                document.getElementById('avgPerformance').textContent = avg.toFixed(1) + '%';
+            }
+        });
+</script>
+{% endblock %}
